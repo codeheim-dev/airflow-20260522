@@ -11,10 +11,10 @@ from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.standard.operators.python import PythonOperator
 import pendulum
 
-def get_random_number(start: int = 0, end: int = 100) -> None:
-    from random import randint
-    print(f"Losuje wartość z zakresu {start} - {end}")
-    print(f"Wartość: {randint(start, end)}")
+def get_avg_from(file: str = "/home/student/airflow-20260522/data/txt/numbers.txt") -> None:
+    with open(file, "r") as f:
+        numbers = [int(x) for x in f.read().split()] 
+        print(sum(numbers) / len(numbers))
 
 # Tworzenie DAG-a
 with DAG(
@@ -31,31 +31,14 @@ with DAG(
         task_id="start"
     )
 
-    bash_operator = BashOperator(
-        task_id="bash_operator",
-        bash_command="ls -l /home/student/airflow-20260522"
+    generate_file = BashOperator(
+        task_id="generate_file",
+        bash_command="echo '5 17 96 35 14' > /home/student/airflow-20260522/data/txt/numbers.txt"
     )
 
-    no_args_operator = PythonOperator(
-        task_id="no_args_operator",
-        python_callable=get_random_number
+    get_average = PythonOperator(
+        task_id="get_average",
+        python_callable=get_avg_from
     )
 
-    args_operator = PythonOperator(
-        task_id="args_operator",
-        python_callable=get_random_number,
-        op_args=[80, 90]  # Kolejność jak w def ... czyli [0] - wartość I argumentu
-    )
-
-    kwargs_operator = PythonOperator(
-        task_id="kwargs_operator",
-        python_callable=get_random_number,
-        op_kwargs={
-            "start": 10,
-            "end": 30
-        }
-    )
-
-    # Flow (kolejność wykonywania zadań)
-    python_tasks = [no_args_operator, args_operator, kwargs_operator]
-    start >> bash_operator >> python_tasks
+    start >> generate_file >> get_average
